@@ -95,6 +95,15 @@ class ValueFidelityClassifier:
             f"Agent response:\n{response_text}"
         )
 
+    def passes_fidelity(self, score: FidelityScore) -> bool:
+        """Return True iff the score meets both the label and confidence threshold.
+
+        FidelityScore.aligned checks only the label. This method also applies the
+        confidence threshold set at construction, so low-confidence ALIGNED calls
+        don't pass the pre-experiment manipulation check.
+        """
+        return score.label == AlignmentLabel.ALIGNED and score.confidence >= self._threshold
+
     def classify(self, response_text: str, profile: ProfileLike) -> FidelityScore:
         """Score one agent response against one value profile.
 
@@ -191,6 +200,14 @@ def load_gold_set(path: Union[str, Path]) -> list[CalibrationExample]:
         if missing:
             print(f"[load_gold_set] skipping entry {i}: missing keys {missing}")
             continue
+        try:
+            human_label = AlignmentLabel(item["human_label"])
+        except ValueError:
+            print(
+                f"[load_gold_set] skipping entry {i}: "
+                f"invalid human_label {item['human_label']!r}"
+            )
+            continue
         examples.append(
             CalibrationExample(
                 response_text=item["response_text"],
@@ -198,7 +215,7 @@ def load_gold_set(path: Union[str, Path]) -> list[CalibrationExample]:
                     id=item["profile_id"],
                     description=item["profile_description"],
                 ),
-                human_label=AlignmentLabel(item["human_label"]),
+                human_label=human_label,
             )
         )
     return examples

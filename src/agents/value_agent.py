@@ -211,5 +211,16 @@ def _parse_response(response_text: str) -> tuple[str, str]:
             "Agent response contains no JSON choice block.\n"
             f"First 200 chars: {response_text[:200]!r}"
         )
-    data = json.loads(match.group())
+    try:
+        data = json.loads(match.group())
+    except json.JSONDecodeError as exc:
+        raise ValueError(
+            f"Agent response JSON block failed to parse: {exc}\n"
+            f"Matched text: {match.group()!r}"
+        ) from exc
+    if "choice" not in data:
+        raise ValueError(
+            f"Agent response JSON block missing 'choice' key. "
+            f"Keys present: {list(data.keys())}"
+        )
     return str(data["choice"]), str(data.get("justification", ""))
