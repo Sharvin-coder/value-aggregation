@@ -54,3 +54,19 @@ class AggregationRule(ABC):
         dilemma: Dilemma,
     ) -> AggregationResult:
         ...
+
+
+def _normalize(
+    counts: dict[str, int | float],
+    choices: list[str] | None = None,
+) -> dict[str, float]:
+    """Return a normalized fraction dict from a count dict.
+
+    If choices is provided every option in that list appears in the output
+    at 0.0 when absent from counts, so distributions are always comparable
+    across rules even when some options received no votes.
+    """
+    result: dict[str, float] = {c: 0.0 for c in (choices or [])}
+    result.update({k: float(v) for k, v in counts.items()})
+    total = sum(result.values())
+    return {k: v / total for k, v in result.items()} if total > 0.0 else result
